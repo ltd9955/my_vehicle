@@ -96,14 +96,19 @@ ros2 topic hz /clock
 
 ## 5. 실습 결과
 
+### 미션 1·2 — 차량 스폰 및 teleop 주행
+
+`spawn_car.launch.py`로 Gazebo 트랙에 `auto_vehicle`이 스폰된 뒤, `teleop_twist_keyboard`(speed 0.50, turn 1.00)로
+`/cmd_vel`을 발행하여 차량이 주행하는 화면. 하단 RTF는 WSL2 소프트웨어 렌더링 환경에서 약 50%로 측정됨.
+
+![Gazebo 스폰 및 teleop 주행](docs/mission1_2_spawn_and_teleop_drive.png)
+
 | 미션 | 내용 | 결과 |
 |---|---|---|
-| 1 | Gazebo 트랙에 4륜 차량 스폰 | `docs/mission1_spawn.png` |
-| 2 | teleop S자 주행 + `/odom` 출력 | `docs/mission2_odom.png` |
+| 1 | Gazebo 트랙에 4륜 차량 스폰 | `docs/mission1_2_spawn_and_teleop_drive.png` |
+| 2 | teleop 주행 + `/odom` 출력 | `docs/mission1_2_spawn_and_teleop_drive.png` (추가 캡처: `docs/mission2_odom.png`) |
 | 3 | `ros2 topic hz /clock` + RTF | `docs/mission3_clock_rtf.png` |
 | 4 (도전) | 15° 경사로 등판 | `docs/mission4_ramp.png` |
-
-> 스크린샷은 `docs/` 폴더에 넣고 위 파일명을 맞춰 주세요.
 
 ## 6. 데이터 흐름
 
