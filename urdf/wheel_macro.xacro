@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    ==================================================================
+    파일: wheel_macro.xacro
+    설명: 4륜 차량에 공통으로 사용되는 바퀴(Wheel)의 형상, 물리 관성,
+          구동/조향 관절(Joint)을 캡슐화한 Xacro 매크로 정의 파일입니다.
+    초보자를 위한 가이드:
+      - Xacro 매크로는 프로그래밍 언어의 함수와 유사합니다.
+      - 반복되는 바퀴 설계를 매크로로 정의하고, 매개변수(params)를 넘겨
+        좌/우, 전/후 4개의 바퀴를 간결하게 생성합니다.
+    ==================================================================
+  -->
+
+  <!--
+    [매크로 1] 원기둥 관성 모멘트(Moment of Inertia) 계산 매크로
+    - 매개변수:
+      * m: 질량 (kg)
+      * r: 원기둥 반지름 (m)
+      * h: 원기둥 길이/두께 (m)
+    - 물리 수식:
+      * 회전축(Z축) 관성 모멘트: Izz = (1/2) * m * r^2
+      * 수직축(X축, Y축) 관성 모멘트: Ixx = Iyy = (1/12) * m * (3*r^2 + h^2)
+  -->
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="${(m / 12.0) * (3.0 * r * r + h * h)}" ixy="0.0" ixz="0.0"
+               iyy="${(m / 12.0) * (3.0 * r * r + h * h)}" iyz="0.0"
+               izz="${(m / 2.0) * (r * r)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!--
+    [매크로 2] 후륜 고정 구동 바퀴 매크로 (drive_wheel)
+    - 조향 기능 없이 차체(parent)에 직접 결합되어 Y축 중심으로 연속 회전(continuous)합니다.
+    - 매개변수:
+      * prefix: 바퀴 이름 접두사 (예: rear_left, rear_right)
+      * parent: 부모 링크 (기본적으로 base_link)
+      * x_reflect: 차량 전후 방향 부호 (+1: 전방, -1: 후방)
+      * y_reflect: 차량 좌우 방향 부호 (+1: 좌측, -1: 우측)
+      * wheel_radius: 바퀴 반지름 (m)
+      * wheel_width: 바퀴 폭/두께 (m)
+      * wheel_mass: 바퀴 질량 (kg)
+      * wheel_track: 좌우 바퀴 중심 간 거리(윤거, m)
+      * wheel_base: 전후 축 중심 간 거리(축거, m)
+  -->
+  <xacro:macro name="drive_wheel" params="prefix parent x_reflect y_reflect wheel_radius wheel_width wheel_mass wheel_track wheel_base">
+
+    <!-- 1. 바퀴 링크 (강체) 정의 -->
+    <link name="${prefix}_wheel_link">
+      <!-- 눈에 보이는 3D 시각적 외형 -->
+      <visual>
+        <!--
+          주의: URDF의 <cylinder>는 기본적으로 Z축(수직) 방향으로 생성됩니다.
+          실제 바퀴처럼 굴러가려면 실린더 축을 Y축(차량 좌우) 방향으로 눕혀야 하므로
+          X축을 기준으로 90도(pi/2 rad) 회전시켜 배치합니다.
+        -->
+        <origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="tire_black">
+          <color rgba="0.15 0.15 0.15 1.0"/>
+        </material>
+      </visual>
+
+      <!-- 물리 엔진이 충돌을 계산하는 기하 형상 -->
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <!-- 관성 모멘트 매크로 호출 -->
+      <xacro:cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+    </link>
+
+    <!-- 2. 차체와 바퀴를 연결하는 관절 (continuous 타입: 무제한 회전) -->
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${parent}"/>
+      <child link="${prefix}_wheel_link"/>
+      <!--
+        부모 링크(base_link) 중심으로부터 바퀴 중심 위치까지의 오프셋
+        x = x_reflect * (축거 / 2)
+        y = y_reflect * (윤거 / 2)
+        z = 0 (섀시 높이에 맞춤)
+      -->
+      <origin xyz="${x_reflect * wheel_base / 2.0} ${y_reflect * wheel_track / 2.0} 0" rpy="0 0 0"/>
+      <!-- 바퀴 회전축은 차량 좌우 방향인 Y축(0 1 0)입니다 -->
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <!-- 3. [4주차] Gazebo 바퀴-지면 마찰계수 (없으면 바퀴가 헛돌고 차가 안 나감 - 실습 10단계 체크리스트 1번) -->
+    <gazebo reference="${prefix}_wheel_link">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+
+  </xacro:macro>
+
+  <!--
+    [매크로 3] 전륜 조향 바퀴 매크로 (steer_wheel)
+    - 조향 동작(Z축 회전, revolute)과 바퀴 회전(Y축 회전, continuous)을
+      동시에 구현하기 위해 2단계 링크-관절 구조로 설계합니다.
+    - 구조: parent -> [steer_joint(revolute)] -> steer_link -> [wheel_joint(continuous)] -> wheel_link
+  -->
+  <xacro:macro name="steer_wheel" params="prefix parent x_reflect y_reflect wheel_radius wheel_width wheel_mass wheel_track wheel_base max_steer_angle">
+
+    <!-- 1. 조향 너클(Steering Knuckle) 링크 (방향 전환을 위한 중간 링크) -->
+    <link name="${prefix}_steer_link">
+      <inertial>
+        <!-- 조향 기구의 가상 경량 질량 할당 -->
+        <mass value="0.15"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.0002" ixy="0.0" ixz="0.0"
+                 iyy="0.0002" iyz="0.0"
+                 izz="0.0002"/>
+      </inertial>
+    </link>
+
+    <!-- 2. 조향 관절: Z축(수직)을 중심으로 좌우로만 회전하는 revolute 관절 -->
+    <joint name="${prefix}_steer_joint" type="revolute">
+      <parent link="${parent}"/>
+      <child link="${prefix}_steer_link"/>
+      <origin xyz="${x_reflect * wheel_base / 2.0} ${y_reflect * wheel_track / 2.0} 0" rpy="0 0 0"/>
+      <!-- 수직 회전축: Z축(0 0 1) -->
+      <axis xyz="0 0 1"/>
+      <!-- 조향각 한계: [-max_steer_angle, +max_steer_angle] (라디안 단위) -->
+      <limit lower="${-max_steer_angle}" upper="${max_steer_angle}" effort="15.0" velocity="2.0"/>
+      <!-- [4주차] Gazebo에서 조향 관절을 제어하는 노드가 없으므로 감쇠를 주어 전륜이 흔들리지 않게 함 -->
+      <dynamics damping="1.0"/>
+    </joint>
+
+    <!-- 3. 실제 굴러가는 바퀴 링크 -->
+    <link name="${prefix}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="tire_black">
+          <color rgba="0.15 0.15 0.15 1.0"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2.0} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <xacro:cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+    </link>
+
+    <!-- 4. 바퀴 회전 관절: 조향 너클 링크에 결합되어 Y축으로 굴러가는 continuous 관절 -->
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_steer_link"/>
+      <child link="${prefix}_wheel_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <!-- 바퀴 회전축: Y축(0 1 0) -->
+      <axis xyz="0 1 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

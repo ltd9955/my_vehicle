@@ -1,0 +1,201 @@
+<?xml version="1.0"?>
+<robot name="auto_vehicle" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    ==================================================================
+    파일: vehicle.urdf.xacro
+    설명: 4륜 모바일 로봇(차량)의 메인 Xacro 모델 파일입니다.
+          섀시(chassis), 전륜 조향부, 후륜 구동 바퀴를 통합 정의합니다.
+    구조:
+      [base_footprint] (지면 접촉 원점, z=0)
+             │ (fixed joint)
+             ▼
+        [base_link] (섀시 중심)
+         ├── [front_left_steer_link]  ──► [front_left_wheel_link]
+         ├── [front_right_steer_link] ──► [front_right_wheel_link]
+         ├── [rear_left_wheel_link]
+         └── [rear_right_wheel_link]
+    ==================================================================
+  -->
+
+  <!-- 바퀴 공통 매크로 파일 포함 (상대 경로) -->
+  <xacro:include filename="wheel_macro.xacro"/>
+
+  <!-- ========================================== -->
+  <!-- 1. 주요 제원 상수(Properties) 정의         -->
+  <!-- ========================================== -->
+  <!-- 차체(Chassis) 치수 및 질량 -->
+  <xacro:property name="chassis_length"    value="0.60"/> <!-- 전장 (Length): 60cm -->
+  <xacro:property name="chassis_width"     value="0.30"/> <!-- 전폭 (Width): 30cm -->
+  <xacro:property name="chassis_height"    value="0.12"/> <!-- 전고 (Height): 12cm -->
+  <xacro:property name="chassis_mass"      value="8.00"/> <!-- 차체 질량: 8kg -->
+
+  <!-- 바퀴(Wheel) 치수 및 질량 -->
+  <xacro:property name="wheel_radius"      value="0.08"/> <!-- 반지름: 8cm (지름 16cm) -->
+  <xacro:property name="wheel_width"       value="0.05"/> <!-- 폭: 5cm -->
+  <xacro:property name="wheel_mass"        value="1.20"/> <!-- 바퀴 개당 질량: 1.2kg -->
+
+  <!-- 기구학적 배치 치수 -->
+  <xacro:property name="wheel_base"        value="0.40"/> <!-- 축거 (앞뒤 바퀴 축간 거리): 40cm -->
+  <xacro:property name="wheel_track"       value="0.36"/> <!-- 윤거 (좌우 바퀴 중심 거리): 36cm -->
+  <xacro:property name="max_steer_angle"   value="0.52"/> <!-- 최대 조향각: 약 30도 (0.52 rad) -->
+
+  <!--
+    [매크로] 직육면체(Box) 관성 모멘트 계산
+    - Ixx = (1/12) * m * (y^2 + z^2)
+    - Iyy = (1/12) * m * (x^2 + z^2)
+    - Izz = (1/12) * m * (x^2 + y^2)
+  -->
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <!-- 박스 중심에 질량 중심(CoM)이 위치하도록 z 오프셋 지정 -->
+      <origin xyz="0 0 ${z/2.0}" rpy="0 0 0"/>
+      <inertia ixx="${(m / 12.0) * (y*y + z*z)}" ixy="0.0" ixz="0.0"
+               iyy="${(m / 12.0) * (x*x + z*z)}" iyz="0.0"
+               izz="${(m / 12.0) * (x*x + y*y)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ========================================== -->
+  <!-- 2. 지면 기준 좌표계 (base_footprint)       -->
+  <!-- ========================================== -->
+  <!--
+    base_footprint는 로봇이 위치한 지면 바로 위(z=0)에 위치하는 가상 링크입니다.
+    내비게이션(Nav2) 및 SLAM에서 로봇의 2D 평면 위치 기준으로 매우 중요합니다.
+  -->
+  <link name="base_footprint"/>
+
+  <!-- ========================================== -->
+  <!-- 3. 차체 섀시 (base_link)                  -->
+  <!-- ========================================== -->
+  <link name="base_link">
+    <!-- 3D 그래픽 외형 -->
+    <visual>
+      <origin xyz="0 0 ${chassis_height/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="deep_blue">
+        <color rgba="0.1 0.35 0.75 1.0"/>
+      </material>
+    </visual>
+
+    <!-- 물리 충돌 영역 -->
+    <collision>
+      <origin xyz="0 0 ${chassis_height/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+
+    <!-- 차체 물리 관성 -->
+    <xacro:box_inertia m="${chassis_mass}" x="${chassis_length}" y="${chassis_width}" z="${chassis_height}"/>
+  </link>
+
+  <!-- base_footprint와 base_link 결합 (고정 관절) -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <!-- 바퀴 반지름(wheel_radius)만큼 섀시를 지면에서 들어올립니다 -->
+    <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ========================================== -->
+  <!-- 4. 4개 바퀴 결합 (매크로 호출)             -->
+  <!-- ========================================== -->
+
+  <!-- [전륜 좌측 바퀴] 조향 너클 + 구동 휠 -->
+  <xacro:steer_wheel
+    prefix="front_left"
+    parent="base_link"
+    x_reflect="1"
+    y_reflect="1"
+    wheel_radius="${wheel_radius}"
+    wheel_width="${wheel_width}"
+    wheel_mass="${wheel_mass}"
+    wheel_track="${wheel_track}"
+    wheel_base="${wheel_base}"
+    max_steer_angle="${max_steer_angle}"/>
+
+  <!-- [전륜 우측 바퀴] 조향 너클 + 구동 휠 -->
+  <xacro:steer_wheel
+    prefix="front_right"
+    parent="base_link"
+    x_reflect="1"
+    y_reflect="-1"
+    wheel_radius="${wheel_radius}"
+    wheel_width="${wheel_width}"
+    wheel_mass="${wheel_mass}"
+    wheel_track="${wheel_track}"
+    wheel_base="${wheel_base}"
+    max_steer_angle="${max_steer_angle}"/>
+
+  <!-- [후륜 좌측 바퀴] 고정축 연속 회전 휠 -->
+  <xacro:drive_wheel
+    prefix="rear_left"
+    parent="base_link"
+    x_reflect="-1"
+    y_reflect="1"
+    wheel_radius="${wheel_radius}"
+    wheel_width="${wheel_width}"
+    wheel_mass="${wheel_mass}"
+    wheel_track="${wheel_track}"
+    wheel_base="${wheel_base}"/>
+
+  <!-- [후륜 우측 바퀴] 고정축 연속 회전 휠 -->
+  <xacro:drive_wheel
+    prefix="rear_right"
+    parent="base_link"
+    x_reflect="-1"
+    y_reflect="-1"
+    wheel_radius="${wheel_radius}"
+    wheel_width="${wheel_width}"
+    wheel_mass="${wheel_mass}"
+    wheel_track="${wheel_track}"
+    wheel_base="${wheel_base}"/>
+
+  <!-- ========================================== -->
+  <!-- 5. [4주차] Gazebo Sim 플러그인 (실습 4단계) -->
+  <!-- ========================================== -->
+  <!--
+    <gazebo> 블록은 RViz(robot_state_publisher)에서는 무시되고,
+    Gazebo가 URDF -> SDF 변환 시 <model> 안에 그대로 삽입합니다.
+  -->
+  <gazebo>
+    <!--
+      [플러그인 1] 차동 구동 (DiffDrive)
+      - 후륜 좌/우 바퀴를 구동하여 /cmd_vel(gz.msgs.Twist)을 받고 /odom(gz.msgs.Odometry)을 발행
+      - wheel_separation / wheel_radius 는 URDF 제원과 반드시 일치해야 오도메트리가 정확함
+      - tf_topic 을 /tf 로 두면 odom -> base_footprint 변환도 bridge.yaml 의 /tf 항목으로 ROS2에 전달됨
+    -->
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>rear_left_wheel_joint</left_joint>
+      <right_joint>rear_right_wheel_joint</right_joint>
+      <wheel_separation>${wheel_track}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odom</odom_topic>
+      <tf_topic>/tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+      <odom_publish_frequency>50</odom_publish_frequency>
+      <max_linear_acceleration>2.0</max_linear_acceleration>
+      <min_linear_acceleration>-2.0</min_linear_acceleration>
+      <max_angular_acceleration>3.0</max_angular_acceleration>
+      <min_angular_acceleration>-3.0</min_angular_acceleration>
+    </plugin>
+
+    <!--
+      [플러그인 2] 관절 상태 발행 (JointStatePublisher)
+      - Gazebo 안에서 실제로 회전하는 바퀴/조향 각도를
+        /world/<world>/model/<model>/joint_state (gz.msgs.Model) 로 발행
+      - bridge.yaml 이 이를 ROS2 /joint_states 로 중계 -> robot_state_publisher 가 TF 계산
+    -->
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+  </gazebo>
+
+</robot>

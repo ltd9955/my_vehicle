@@ -1,0 +1,53 @@
+# ==================================================================
+# 파일: bridge.yaml
+# 패키지: ros_gz_bridge
+# 설명: Gazebo Sim(구 Ignition)과 ROS 2 간의 양방향/단방향 메시지 변환 매핑 설정입니다.
+# 
+# 방향 플래그(direction) 규칙:
+#   - GZ_TO_ROS: Gazebo Transport 토픽 -> ROS 2 DDS 토픽 단방향 발행
+#   - ROS_TO_GZ: ROS 2 DDS 토픽 -> Gazebo Transport 토픽 단방향 전달
+#   - BIDIRECTIONAL: 양방향 동기화
+# ==================================================================
+
+# 1. 시뮬레이션 가상 시간 동기화
+# Gazebo 물리 엔진이 연산한 가상 시간(/clock)을 ROS 2로 전달하여
+# use_sim_time이 설정된 모든 노드가 시뮬레이션 시간과 동기화되도록 합니다.
+- topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# 2. 차량 속도/조향 제어 명령
+# 사용자의 teleop 노드나 자율주행 제어 노드가 발행하는 cmd_vel 속도 명령을
+# Gazebo 내부의 차동구동/아커만 조향 플러그인으로 전달합니다.
+- topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  gz_type_name: "gz.msgs.Twist"
+  direction: ROS_TO_GZ
+
+# 3. 주행 오도메트리(Odometry) 피드백
+# Gazebo 물리 엔진 상에서 바퀴가 회전하며 이동한 누적 위치와 속도를
+# ROS 2의 내비게이션(Nav2) 및 SLAM 노드로 전달합니다.
+- topic_name: "/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
+# 4. 좌표계 동적 변환 정보 (/tf)
+# Gazebo에서 계산된 월드-로봇 간의 위치 자세 3D 변환을 ROS 2 tf 버퍼로 공급합니다.
+- topic_name: "/tf"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+
+# 5. 관절 상태 모니터링 (/joint_states)
+# Gazebo 상에서 회전하는 실제 바퀴 및 조향 각도를 ROS 2로 전달합니다.
+# Gazebo 쪽 JointStatePublisher 플러그인은 /world/<월드명>/model/<모델명>/joint_state 로 발행하므로
+# ROS 토픽 이름(/joint_states)과 Gazebo 토픽 이름을 따로 지정합니다.
+#   월드명: car_track.sdf 의 <world name="car_track_world">
+#   모델명: spawn_car.launch.py 의 '-name auto_vehicle'
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/world/car_track_world/model/auto_vehicle/joint_state"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
