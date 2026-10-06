@@ -1,0 +1,41 @@
+# ==============================================================================
+# 오토모티브SW프로그래밍 6주차: ros_gz_bridge 센서 매핑 설정 파일
+# 작성자: 김동주 교수 (deekim@cu.ac.kr)
+#
+# [설명]
+# Gazebo Sim(Protobuf 기반)의 가상 센서 토픽을
+# ROS 2(DDS 기반) 표준 sensor_msgs 토픽으로 실시간 변환하는 브릿지 규칙 정의서입니다.
+# direction: GZ_TO_ROS (Gazebo 시뮬레이터에서 발생한 센서 데이터를 ROS 2로 전달)
+# ==============================================================================
+
+# 1. 2D 라이다 레이저 스캔 매핑
+- ros_topic_name: "/scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: "GZ_TO_ROS"
+  qos_profile: SENSOR_DATA
+
+# 2. RGB 전방 카메라 원시 이미지 스트림 매핑
+- ros_topic_name: "/camera/image_raw"
+  gz_topic_name: "/camera/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: "GZ_TO_ROS"
+  qos_profile: SENSOR_DATA
+
+# 3. 카메라 내부 파라미터 및 왜곡 메타데이터 매핑
+- ros_topic_name: "/camera/camera_info"
+  gz_topic_name: "/camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: "GZ_TO_ROS"
+  qos_profile: SENSOR_DATA
+
+# 4. IMU 6축 관성 센서(가속도계 및 자이로스코프) 데이터 매핑
+- ros_topic_name: "/imu/data"
+  gz_topic_name: "/imu/data"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: "GZ_TO_ROS"
+  qos_profile: SENSOR_DATA

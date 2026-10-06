@@ -46,6 +46,19 @@
       name="gz::sim::systems::SceneBroadcaster">
     </plugin>
 
+    <!-- [6주차] 센서 시스템: gpu_lidar / camera 렌더링 -->
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <!-- [6주차] IMU 센서 시스템 -->
+    <plugin
+      filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu">
+    </plugin>
+
     <!-- ========================================== -->
     <!-- 3. 환경 조명 (Directional Sun)             -->
     <!-- ========================================== -->

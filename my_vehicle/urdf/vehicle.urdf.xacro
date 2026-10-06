@@ -20,7 +20,7 @@
 
   <!-- 바퀴 공통 매크로 파일 포함 (상대 경로) -->
   <xacro:include filename="wheel_macro.xacro"/>
-
+  <xacro:include filename="vehicle_sensors.xacro"/>
   <!-- ========================================== -->
   <!-- 1. 주요 제원 상수(Properties) 정의         -->
   <!-- ========================================== -->
