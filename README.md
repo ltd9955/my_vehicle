@@ -1,11 +1,13 @@
-# my_vehicle — 오토모티브 SW프로그래밍 실습 (2·3·4·5·6주차)
+# my_vehicle — 오토모티브 SW프로그래밍 실습 (2·3·4·5·6·9주차)
 
-주차별 실습을 **하나의 ROS 2 워크스페이스형 저장소**로 정리했습니다. 저장소를 `~/ros2_ws/src`에 clone하면 아래 패키지 4개가 한 번에 빌드됩니다.
+주차별 실습을 **하나의 ROS 2 워크스페이스형 저장소**로 정리했습니다. 저장소를 `~/ros2_ws/src`에 clone하면 아래 패키지 5개가 한 번에 빌드됩니다.
 
 - ROS 2 배포판: `lyrical` (Ubuntu 26.04 / WSL2)
 - Gazebo Sim: `gz sim` 10.x (`ros-lyrical-ros-gz`)
 
 > **6주차 과제**: 센서 시뮬레이션 통합과 Best Effort QoS → [3.5절](#35-6주차-my_sensor_pkg--answer--센서-통합과-best-effort-qos), AI 활용과 본인 보강 내용 → [6절](#6-ai-활용-내용과-본인-보강-내용)
+>
+> **9주차 과제**: RViz2 커스텀 마커(MarkerArray, lifetime) → 3.6절, AI 활용과 본인 보강 내용 → 6장 하단 "9주차"
 
 ## 1. 저장소 구조
 
@@ -28,6 +30,10 @@ my_vehicle/                     # 저장소 루트 (colcon이 하위 패키지�
 │   ├── my_sensor_pkg/sensor_listener.py
 │   ├── config/sensor_bridge.yaml
 │   └── launch/sensors_sim.launch.py
+├── my_viz_pkg/                 # [9주차] RViz2 커스텀 마커 (MarkerArray, lifetime)
+│   ├── my_viz_pkg/             #   custom_marker_publisher.py, trail_marker_publisher.py(도전)
+│   ├── launch/                 #   rviz_advanced.launch.py, trail_demo.launch.py(도전)
+│   └── config/                 #   integrated_view.rviz, trail_view.rviz
 ├── answer/                     # [6주차 과제 1]
 │   └── emergency_stop_node.py
 ├── screenshots/                # [6주차 과제 2] 실행 화면 캡처
@@ -196,6 +202,69 @@ python3 ~/ros2_ws/src/my_vehicle/answer/emergency_stop_node.py
 
 센서 주기와 대역폭이 설정값보다 낮은 것은 센서가 시뮬레이션 시간 기준으로 동작하는데 WSL2에서 GPU 없이 소프트웨어 렌더링(카메라·라이다)을 하여 RTF가 1.0에 못 미치기 때문입니다.
 
+### 3.6 [9주차] `my_viz_pkg` — RViz2 커스텀 마커
+
+자율주행 알고리즘의 결과(예상 주행 경로, 장애물 박스, 경고 문구)를 RViz2의 3D 화면에 그리는 마커 노드입니다.
+
+```bash
+ros2 launch my_viz_pkg rviz_advanced.launch.py
+```
+
+`/visual_markers`(visualization_msgs/MarkerArray)로 **마커 3종을 한 패킷에 묶어 10 Hz로** 발행합니다.
+
+| 마커 | ns / id | 타입 | 내용 |
+|---|---|---|---|
+| 예상 주행 경로 | `trajectory` / 1 | LINE_STRIP | 전방 10 m, 40개 점의 초록색 S자 곡선 (시간에 따라 움직임) |
+| 장애물 박스 | `obstacles` / 101 | CUBE | 전방 4 m에서 좌우로 횡단하는 반투명 주황-빨강 3D 박스 |
+| 경고 문구 | `warning_labels` / 201 | TEXT_VIEW_FACING | 박스 위 `WARNING: OBSTACLE DETECTED / Distance: x.xx m` (카메라를 항상 바라보는 빌보드) |
+
+세 마커 모두 **`lifetime = 0.2 s`** (발행 주기 0.1 s의 2배) 입니다. RViz2의 Fixed Frame은 `base_link`입니다.
+
+> **실행화면에 대해**: 이 환경(WSL2)에서 WSLg가 GUI 창을 윈도우 화면에 표시하지 못하는 문제(`[WARN:COPY MODE]`)가 있어, 아래 RViz2 화면은 WSL 안의 **가상 디스플레이(Xvfb)에서 RViz2를 소프트웨어 렌더링으로 실행해 캡처**한 실제 RViz2 화면입니다. 시점 회전은 가상 마우스 드래그로 했고, 노드 종료는 `pkill`로 했습니다.
+
+#### 미션 1. 마커 동시 렌더링
+경로선, 장애물 박스, 경고 텍스트가 동시에 표시되고, 마우스로 시점을 돌려도 텍스트가 정면을 향합니다(빌보드).
+
+![미션 1 - 마커 렌더링](docs/week9_mission1_markers.png)
+![미션 1 - 시점을 돌려도 텍스트가 정면을 향함](docs/week9_mission1_billboard.png)
+
+#### 미션 2. `lifetime` 잔상 제거
+마커 노드만 종료합니다(RViz2는 그대로 둠).
+
+```bash
+pkill -f custom_marker_publisher
+```
+
+| 노드 실행 중 | 노드 종료 0.2초 후 |
+|---|---|
+| ![실행 중](docs/week9_mission2_before.png) | ![종료 후](docs/week9_mission2_after.png) |
+
+**원리**: 마커에 `lifetime`을 지정하면 RViz2가 마커마다 내부 타이머를 두고, 마지막으로 수신한 시점부터 수명이 지나면 그래픽 메모리에서 자동으로 지웁니다. 노드가 10 Hz로 계속 새 마커를 보내는 동안에는 수명이 매번 갱신되어 화면이 깜빡이지 않고 유지되고, 노드가 종료되면 재수신이 없으므로 0.2초 뒤 모두 사라집니다. 수명 0.2초는 발행 주기(0.1초)의 약 2배로, 패킷이 한 번 누락되어도 깜빡이지 않으면서 노드가 죽으면 즉시 사라지는 값입니다. 반대로 `lifetime = 0`(기본값, 무한 수명)이면 노드가 비정상 종료해도 과거 장애물이 화면에 "유령"처럼 남아 운전자·관제 요원을 오도하고, 지우기(DELETE) 명령을 빠뜨린 마커가 쌓여 RViz2의 메모리가 계속 커집니다.
+
+#### 미션 3. MarkerArray 패킷 분석
+```bash
+ros2 topic echo /visual_markers --once
+```
+
+![미션 3 - echo 출력](docs/week9_mission3_echo.png)
+
+위 이미지는 `ros2 topic echo /visual_markers --once`의 **실제 출력 텍스트를 터미널 모양 이미지로 옮긴 것**입니다(위쪽은 출력의 앞부분 그대로, 아래쪽은 같은 출력에서 마커 3개의 핵심 필드 발췌). 전체 출력(274줄)은 [`docs/week9_mission3_echo.txt`](docs/week9_mission3_echo.txt)에 있습니다.
+
+- 하나의 MarkerArray 패킷 안에 서로 다른 마커 3개(`trajectory`/LINE_STRIP, `obstacles`/CUBE, `warning_labels`/TEXT_VIEW_FACING)가 `markers[]` 배열로 들어 있습니다.
+- 마커 100개를 개별 토픽으로 100번 보내면 DDS 헤더와 콜백 호출이 100번 생기지만, MarkerArray는 **한 번의 발행**으로 같은 타임스탬프에 동기화되어 한 프레임에 함께 그려집니다(원자성, 대역폭·CPU 절약).
+- `(ns, id)` 조합이 마커의 고유 키입니다. 같은 ns 안에서 id가 겹치면 나중 마커가 앞의 것을 덮어씁니다.
+
+이 구성은 별도 ROS 도메인에서 토픽을 구독해 확인했습니다: 발행 주기 약 10 Hz, 3종 마커 모두 `lifetime 0.20 s`, 경로선 점 40개, 마커 노드를 종료한 뒤에는 메시지가 수신되지 않음.
+
+#### (도전) 과거 5초 궤적 그라데이션
+```bash
+ros2 launch my_viz_pkg trail_demo.launch.py
+```
+
+가상 차량이 odom 좌표계에서 반지름 3 m 원을 돌고(`odom → base_link` TF 30 Hz), **0.5초마다 위치를 기록해 최근 5초 분량만** 하나의 `POINTS` 마커에 담아 `/trajectory_trail`로 발행합니다. 점마다 알파(`colors[]`)를 달리해 **오래된 점일수록 투명하게**(최신 1.0 → 5초 전 약 0.15) 그렸습니다. 5초가 지난 점은 버려 마커 크기가 일정하게 유지됩니다.
+
+![도전 - 궤적 그라데이션](docs/week9_challenge_trail.png)
+
 ## 4. 원본 코드에서 수정한 내용
 
 ### 3·4주차 (code03 + code04 통합)
@@ -241,6 +310,18 @@ python3 ~/ros2_ws/src/my_vehicle/answer/emergency_stop_node.py
 | Subscription (`sensor_listener_node`, `emergency_stop_node`) | BEST_EFFORT | BEST_EFFORT |
 
 구독자가 Best Effort이고 발행자가 Reliable이어도 연결은 되지만(Best Effort 구독자는 Reliable 발행자와 호환), 발행자 쪽 Reliable은 패킷 손실 시 재전송 때문에 최신 프레임이 밀리는 Head-of-Line Blocking 위험이 있습니다. 그래서 브릿지 발행자도 센서 표준 프로파일로 맞췄습니다. 브릿지 YAML이 지원하는 QoS 키는 설치된 `ros_gz_bridge`로 시험해서 확인했습니다(`qos_profile`에 문자열 값 지정은 적용, 같은 이름의 중첩 항목이나 `reliability` 키 단독 지정은 적용되지 않음).
+
+### 9주차 (code09 → `my_viz_pkg`)
+
+| 항목 | 원본 (code09) | 수정 후 |
+|---|---|---|
+| 패키지/실행명 | launch가 `rviz_visualization` / `custom_marker_publisher.py` (슬라이드는 `my_viz_pkg`) | `my_viz_pkg` 패키지, `console_scripts` 진입점 `custom_marker_publisher` |
+| Fixed Frame TF | RViz2 Fixed Frame이 `base_link`인데 TF를 발행하는 노드가 없음 → "frame does not exist"로 마커가 안 그려질 수 있음 | launch에 `odom → base_link` 정적 TF 발행 노드 추가 |
+| 텍스트 마커 | 한글(`[위험] 장애물 감지!`) — RViz2 기본 글꼴에 한글 글리프가 없어 표시되지 않을 위험 | 영문 `WARNING: OBSTACLE DETECTED` 로 변경(예방 조치) |
+| RViz 실행 | 항상 실행 | `rviz:=false` 인자 추가 (노드만 검증할 때) |
+| 종료 처리 | `kill`/`pkill`(SIGTERM)로 끄면 `ExternalShutdownException` 트레이스백 출력, 종료 코드 1 | 외부 종료 신호를 정상 종료로 처리 |
+| 설정 파일 설치 | 경로를 `__file__` 기준으로 계산 | 설치된 `share/my_viz_pkg/config`에서 로드 |
+| 도전 미션 | 없음 | `trail_marker_publisher` + `trail_demo.launch.py` + `trail_view.rviz` 신규 (base_link 프레임 마커는 `stamp`를 0으로 두어 RViz2의 TF 외삽 오류 방지) |
 
 ## 5. 데이터 흐름
 
@@ -299,3 +380,22 @@ Claude Code (Anthropic Claude)를 사용했습니다. 이 과제와 이전 주�
 **측정값 해석**: `/scan` 4.6 Hz, 카메라 4.7 MB/s가 PPT 예시(10 Hz, 27.6 MB/s)보다 낮은 것은 Gazebo RTF가 약 40~50 %이고 WSL2에서 GPU 없이 소프트웨어 렌더링을 하기 때문으로 해석했습니다.
 
 **알려진 한계(개선 과제)**: 라이다 `range_min`(0.15 m) 안쪽의 값은 무효값으로 처리되어 검사에서 제외되므로, 장애물이 그보다 가까워지면 경고가 멈출 수 있습니다. 이 노드는 경고만 출력하고 `/cmd_vel`로 정지 명령을 보내지는 않습니다(PPT 도전 과제의 긴급 제동은 미구현).
+
+### 9주차 작업 분담 (AI 활용)
+
+**AI(Claude Code)가 수행한 것**
+- `week09.pptx`와 `code09`를 비교해 차이와 문제점(패키지/실행명 불일치, Fixed Frame TF 부재, 한글 텍스트 위험, 종료 처리) 분석
+- `my_viz_pkg` 패키지 구성, launch 수정(정적 TF 노드, `rviz` 인자), 한글 텍스트의 영문화, 종료 신호 처리 수정
+- 도전 미션 노드(`trail_marker_publisher`)와 launch/RViz 설정 작성
+- 별도 ROS 도메인에서 토픽·TF를 구독해 발행 주기, 마커 필드(`lifetime`, 점 개수, 알파 그라데이션), 노드 종료 후 발행 중단 확인
+
+**캡처와 실행 환경 (AI가 수행)**
+- WSLg 표시 문제로 윈도우 화면에 RViz2가 보이지 않아, 사용자가 설치한 `xvfb`, `xdotool`, `imagemagick`으로 가상 디스플레이를 만들고 그 안에서 RViz2를 실행해 캡처 6장(미션 1~2, 도전 미션)을 AI가 직접 촬영
+- 미션 3은 실제 `echo --once` 출력을 텍스트로 저장하고 터미널 모양 이미지로 변환
+
+**본인(사용자)이 수행한 것**
+- 과제 요구사항 확인과 진행 방향 결정(제출 범위, 도전 미션 포함 여부)
+- 캡처에 필요한 도구 설치(`sudo apt install xvfb xdotool imagemagick x11-apps`)
+- 결과물 검토와 GitHub 저장소 push, URL 제출
+
+**참고**: 노드의 토픽·TF 동작은 별도 ROS 도메인에서 구독해 확인했고, RViz2 화면 렌더링은 위 가상 디스플레이 캡처로 확인했습니다.

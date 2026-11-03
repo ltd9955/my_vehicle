@@ -15,7 +15,7 @@ import math
 from collections import deque
 
 import rclpy
-from builtin_interfaces.msg import Duration
+from builtin_interfaces.msg import Duration, Time
 from geometry_msgs.msg import Point, TransformStamped
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -90,6 +90,9 @@ class TrailMarkerPublisherNode(Node):
 
         lifetime = Duration(sec=0, nanosec=300000000)   # 0.3초 (발행 주기 0.1초의 3배)
         now = self.get_clock().now().to_msg()
+        # base_link 프레임 마커는 stamp 를 0 으로 두어 RViz2가 '가장 최신 TF'로 변환하게 한다.
+        # (현재 시각 stamp 는 TF 최신 시각보다 앞서 외삽 오류를 일으킨다)
+        zero_stamp = Time()
         array = MarkerArray()
 
         # [마커 1] 과거 궤적 점들 (POINTS, 점마다 알파가 다른 그라데이션)
@@ -117,7 +120,7 @@ class TrailMarkerPublisherNode(Node):
         # [마커 2] 현재 차량 위치 박스 (base_link 프레임에 고정)
         car = Marker()
         car.header.frame_id = 'base_link'
-        car.header.stamp = now
+        car.header.stamp = zero_stamp
         car.ns = 'vehicle'
         car.id = 1
         car.type = Marker.CUBE
@@ -132,7 +135,7 @@ class TrailMarkerPublisherNode(Node):
         # [마커 3] 설명 텍스트 (항상 화면을 향함)
         label = Marker()
         label.header.frame_id = 'base_link'
-        label.header.stamp = now
+        label.header.stamp = zero_stamp
         label.ns = 'labels'
         label.id = 2
         label.type = Marker.TEXT_VIEW_FACING

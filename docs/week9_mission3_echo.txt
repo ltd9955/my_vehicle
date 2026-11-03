@@ -1,0 +1,274 @@
+markers:
+- header:
+    stamp:
+      sec: 1793686982
+      nanosec: 839784989
+    frame_id: base_link
+  ns: trajectory
+  id: 1
+  type: 4
+  action: 0
+  pose:
+    position:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+  scale:
+    x: 0.08
+    y: 0.0
+    z: 0.0
+  color:
+    r: 0.10000000149011612
+    g: 0.8999999761581421
+    b: 0.4000000059604645
+    a: 0.8500000238418579
+  lifetime:
+    sec: 0
+    nanosec: 200000000
+  frame_locked: false
+  points:
+  - x: 0.0
+    y: -0.27800371710016897
+    z: 0.02
+  - x: 0.25
+    y: -0.34075065405898686
+    z: 0.02
+  - x: 0.5
+    y: -0.4000929231196381
+    z: 0.02
+  - x: 0.75
+    y: -0.45543759594561456
+    z: 0.02
+  - x: 1.0
+    y: -0.5062316868605561
+    z: 0.02
+  - x: 1.25
+    y: -0.5519676780983346
+    z: 0.02
+  - x: 1.5
+    y: -0.5921885907528105
+    z: 0.02
+  - x: 1.75
+    y: -0.626492550760007
+    z: 0.02
+  - x: 2.0
+    y: -0.6545368042909132
+    z: 0.02
+  - x: 2.25
+    y: -0.6760411424344464
+    z: 0.02
+  - x: 2.5
+    y: -0.690790700952265
+    z: 0.02
+  - x: 2.75
+    y: -0.6986381071312153
+    z: 0.02
+  - x: 3.0
+    y: -0.6995049522827647
+    z: 0.02
+  - x: 3.25
+    y: -0.6933825751766997
+    z: 0.02
+  - x: 3.5
+    y: -0.6803321485812752
+    z: 0.02
+  - x: 3.75
+    y: -0.6604840680451356
+    z: 0.02
+  - x: 4.0
+    y: -0.6340366490280948
+    z: 0.02
+  - x: 4.25
+    y: -0.601254145398616
+    z: 0.02
+  - x: 4.5
+    y: -0.5624641090965109
+    z: 0.02
+  - x: 4.75
+    y: -0.5180541173422282
+    z: 0.02
+  - x: 5.0
+    y: -0.4684679000933857
+    z: 0.02
+  - x: 5.25
+    y: -0.4142009064417096
+    z: 0.02
+  - x: 5.5
+    y: -0.3557953542494835
+    z: 0.02
+  - x: 5.75
+    y: -0.293834812487904
+    z: 0.02
+  - x: 6.0
+    y: -0.2289383704088214
+    z: 0.02
+  - x: 6.25
+    y: -0.1617544518095776
+    z: 0.02
+  - x: 6.5
+    y: -0.09295433619676541
+    z: 0.02
+  - x: 6.75
+    y: -0.02322545158329288
+    z: 0.02
+  - x: 7.0
+    y: 0.04673549406508634
+    z: 0.02
+  - x: 7.25
+    y: 0.116229474105467
+    z: 0.02
+  - x: 7.5
+    y: 0.18456212766094182
+    z: 0.02
+  - x: 7.75
+    y: 0.2510506974449568
+    z: 0.02
+  - x: 8.0
+    y: 0.3150308516464296
+    z: 0.02
+  - x: 8.25
+    y: 0.3758633217136056
+    z: 0.02
+  - x: 8.5
+    y: 0.43294028971411425
+    z: 0.02
+  - x: 8.75
+    y: 0.4856914614508323
+    z: 0.02
+  - x: 9.0
+    y: 0.5335897646529854
+    z: 0.02
+  - x: 9.25
+    y: 0.5761566153080521
+    z: 0.02
+  - x: 9.5
+    y: 0.6129666995150164
+    z: 0.02
+  - x: 9.75
+    y: 0.6436522230802781
+    z: 0.02
+  colors: []
+  texture_resource: ''
+  texture:
+    header:
+      stamp:
+        sec: 0
+        nanosec: 0
+      frame_id: ''
+    format: ''
+    data: []
+  uv_coordinates: []
+  text: ''
+  mesh_resource: ''
+  mesh_file:
+    filename: ''
+    data: []
+  mesh_use_embedded_materials: false
+- header:
+    stamp:
+      sec: 1793686982
+      nanosec: 839784989
+    frame_id: base_link
+  ns: obstacles
+  id: 101
+  type: 1
+  action: 0
+  pose:
+    position:
+      x: 4.0
+      y: 0.23763308104546865
+      z: 0.5
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+  scale:
+    x: 0.8
+    y: 0.8
+    z: 1.0
+  color:
+    r: 1.0
+    g: 0.3499999940395355
+    b: 0.10000000149011612
+    a: 0.6000000238418579
+  lifetime:
+    sec: 0
+    nanosec: 200000000
+  frame_locked: false
+  points: []
+  colors: []
+  texture_resource: ''
+  texture:
+    header:
+      stamp:
+        sec: 0
+        nanosec: 0
+      frame_id: ''
+    format: ''
+    data: []
+  uv_coordinates: []
+  text: ''
+  mesh_resource: ''
+  mesh_file:
+    filename: ''
+    data: []
+  mesh_use_embedded_materials: false
+- header:
+    stamp:
+      sec: 1793686982
+      nanosec: 839784989
+    frame_id: base_link
+  ns: warning_labels
+  id: 201
+  type: 9
+  action: 0
+  pose:
+    position:
+      x: 4.0
+      y: 0.23763308104546865
+      z: 1.3
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      w: 1.0
+  scale:
+    x: 0.0
+    y: 0.0
+    z: 0.32
+  color:
+    r: 1.0
+    g: 1.0
+    b: 1.0
+    a: 1.0
+  lifetime:
+    sec: 0
+    nanosec: 200000000
+  frame_locked: false
+  points: []
+  colors: []
+  texture_resource: ''
+  texture:
+    header:
+      stamp:
+        sec: 0
+        nanosec: 0
+      frame_id: ''
+    format: ''
+    data: []
+  uv_coordinates: []
+  text: 'WARNING: OBSTACLE DETECTED
+
+    Distance: 4.01 m'
+  mesh_resource: ''
+  mesh_file:
+    filename: ''
+    data: []
+  mesh_use_embedded_materials: false
+---
